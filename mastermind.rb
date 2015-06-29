@@ -30,29 +30,35 @@ class MasterMind
               input = gets.chomp
         end
         if input.downcase == computer.downcase
-            #choose random Colors indexes. This is our answer
-            4.times{ answer_code.push(
-                     $Colors.index( $Colors.random_element )) }
-            win_message = human_guessing(answer_code)
+          #choose random Colors indexes. This is our answer
+          4.times{ answer_code.push(
+                  $Colors.index( $Colors.random_element )) }
+          win_message = human_guessing(answer_code)
         else
-            win_message = computer_guessing(answer_code)
-            puts "not ready yet"
+          puts "秘密なコードと作ってください"
+          input = gets.chomp.split
+        while (!array_match?(input, $Colors))
+          puts "認められる記入の例え:
+          yellow green purple orange
+          blue red green green
+          purple yellow red red"
+          input = gets.chomp.split
+        end
+          answer_code = convert_to_colors_indexes(input)
+          win_message = computer_guessing(answer_code)
         end
         
         @answer_code = convert_to_readable_colors(@answer_code)
-        puts "The code was #{@answer_code}"
         puts win_message
+        puts "答え： #{@answer_code}"
     end
     
     def human_guessing(answer_code)
       turns_left = 12
       finished = false
       while(turns_left > 0 && finished != true)
-      new_code =[]
-      new_code += answer_code
         turns_left -= 1
-        puts "Answer is #{new_code}"
-        puts "Remaining turns: #{turns_left}"
+        puts "残っているターン: #{turns_left}"
         puts "当たってみてください。例えば: blue yellow green orange"
         input = gets.chomp.split
         while (!array_match?(input, $Colors))
@@ -63,7 +69,7 @@ class MasterMind
         input = gets.chomp.split
         end
         guess = convert_to_colors_indexes(input)
-        results = guess_check(guess, new_code) # 0 is a red, 1 is a white
+        results = guess_check(guess, answer_code) # 0 is a red, 1 is a white
         
         if results == [0,0,0,0]
           finished = true
@@ -72,30 +78,59 @@ class MasterMind
         end
         
         if finished
-          return "Wow, you guessed it! Remaining chances: #{turns_left}"
+          return "出来た！残っているチャンス: #{turns_left}"
         end
       end
         
-      return "Sorry, ran out of guesses"
+      return "チャンスがなくなった。"
     end
     
     # Next
     def computer_guessing(answer_code)
+      puts "考えています。少々お待ち下さい。"
+      @possibilities = initialize_possibilities([0,1,2,3,4,5])
         turns_left = 12
         finished = false
+        first_guess = true
+        results = []
+        guess = []
         while(turns_left > 0 && finished != true)
-        turns_left -= 1
+          turns_left -= 1
+          if first_guess
+            first_guess = false
+            guess = [0,0,1,1]
+          else
+            guess = @possibilities[@possibilities.size / 2]
+          end
+        
+          results = guess_check(guess,answer_code)
+          @past_guess.add_result(guess, results)
+          puts "-----------------------------------------"
+        
+          if results == [0,0,0,0]
+            finished = true
+          else
+            @possibilities.delete_if{|pos|
+              guess_check(pos, guess) != results
+            }
+          end
         end
         
         if finished
-            return "I have guessed your code, human. Remaining chances: #{turns_left}"
+          return "できました。残っているチャンスは：#{turns_left}"
         else
-            return "Somehow I ran out of guesses. Tell my engineer."
+          return "まけた！？これは無理やろう！！！."
         end
     end
     
-    def guess_check(guess, new_code)
+    def initialize_possibilities(seed) # completely wrong 
+        return seed.repeated_permutation(4).to_a
+    end
+    
+    def guess_check(guess, answer_code)
         results = []
+        new_code = []
+        new_code += answer_code
         guess_array = []
         guess_array += guess
         # check for reds, remove all hits from both arrays and push a red
@@ -169,7 +204,19 @@ end
 input = "yes"
 # Initialize
 while (input == "yes")
-  # welcome to mastermind
+  puts "アスターマインドへようこそ！ゲームのやりかた：
+      　blue, yellow, green, orange, red, purpleという色から誰かが秘密なコードをつくります。
+      　コード作っていない人は当たってみます。当たり方は、色を使って自分のコードを作る。
+      　コードが同じやったら勝ちます。
+      　チャンスが無くなったら負けます。
+      　色と位置が同じならば、redという結果はでる。
+      　色だけが同じやったら、whiteという結果はでる。
+      　当たり方はこの通り
+      　（例の秘密なコードはblue blue orange yellow）：
+      　blue green yellow yellow -- red red (blue と yellow が当たったから、それを消して、残っている色の中で同じ色はないからwhiteなし)
+      　orange orange yellow blue -- white white white (位置は当たっていないけど、orangeとyellowとblueは色同じ) 
+      　blue yellow orange yellow -- red red red
+      　blue blue orange yellow -- WINNER!"
   MasterMind.new
     puts "またしますか？ Yes か No?"
     input = gets.chomp
